@@ -1,0 +1,65 @@
+# install chrony daemon
+- ansible multi -b -m yum -a "name="chrony state=present"
+
+# make sure chrony daemon is started and set to run on boot
+- ansible multi -b -m service -a "name=chronyd state=started enable=yes"
+
+# to check servers are synced closely to the official time on a time servers
+ansible multi -b -a "chronyc tracking"
+
+# install package
+- ansible app -b -m yum -a "name=python3-pip state=present"
+- ansible app -b -m pip -a "name=django<4 state=present"
+- ansible db -b -m yum -a "name=mariadb-server state=present"
+- ansible db -b -m serice -a "name=mariadb state=started enabled=yes"
+- ansible app -b -m package -a "name=git state=present"
+# configure system firewall
+- ansible db -b -m yum -a "name=firewalld state=present"
+- ansible db -b -m service -a "name=firewalld state=started enabled=yes"
+- ansible db -b -m firewalld -a "zone=database state=present permanant=yes"
+- ansible db -b -m firewalld -a "source=192.168.60.0/24 zone=database state=enabled permanant=yes"
+- ansible db -b -m firewalld -a "port=3306 tcp zone=database" state=enable permanant=yes
+
+#check service status
+- ansible app -b -a "systemctl status chronyd"
+
+# restart chrony service
+- ansible app -b -a "service chronyd retsrat" --limit "192.168.60.4"
+- ansible app -b -a "service ntpd restart" -- limit "*.4"
+- ansible app -b -a "service ntpd restart" -- limit ~"*.4"
+
+# add an admin group on the app servers for the server administrators
+- ansible app -b -m group -a "name=admin state=present"
+
+# add an user
+- ansible app -b -m user -a "name=johndoe group=admin createhome=yes generate_ssh_key=yes"
+
+# delete an user
+- ansible app -b -m user -a "name=johndoe state=adsent remove=yes"
+
+# detail about a file
+- ansible multi -m stat -a "path=/etc/environment"
+
+# copy file
+# src can be a file or a directory
+# trailing / - only the content of the directory will be copied into the dest
+# omit trailing / - content and the directory it self will be copied into the dest
+- ansible multi -m copy -a "src=/etc/hosts dest=/tmp/hosts"
+
+# retrieve a file from a server
+- ansible multi -b -m fetch -a "src=/etc/hosts dest=/tmp"
+
+# create a directory
+- ansible multi -m file -a "dest=/tmp/test mode=644 state=directory"
+
+# create a symlink
+- ansible multi -m file -a "src=/src/file dest=/dest/symlink state=link"
+
+# view last few lines of the messages log file on each servers
+- ansible multi -b -a "tail /var/log/messages"
+
+# grep with ansible (must use shell)
+- ansible multi -b -m shell -a "tail /var/log/messages" | grep ansible-command | wc -l
+
+# run a shell script on all servers veryday at 4am
+- ansible multi -b -m cron -a "name=daily-cron-all-servers hours=4 job='/path/to/daily-script-job.sh'"
